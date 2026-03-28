@@ -37,15 +37,26 @@ class IsAdmin(permissions.BasePermission):
 # ─── REPORTS ───────────────────────────────────────────
 class ReportListCreateView(generics.ListCreateAPIView):
     serializer_class = ReportSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'description', 'category_type', 'status', 'quartier']
-    ordering_fields = ['created_at', 'priority', 'severity']
+    permission_classes = [] 
+    authentication_classes = []
 
     def get_queryset(self):
         user = self.request.user
-        qs = Report.objects.all() if user.role == 'admin' else Report.objects.filter(user=user)
-        qs = qs.filter(is_archived=False)
+        
+        # If admin/technician, show all
+        if user.is_authenticated and hasattr(user, 'role') and user.role in ['admin', 'technician']:
+            return Report.objects.all().filter(is_archived=False).order_by('-created_at')
+        
+        # If regular user, show their own
+        if user.is_authenticated:
+            return Report.objects.filter(user=user, is_archived=False).order_by('-created_at')
+            
+        # If anonymous (citizen), show NOTHING but allow the POST to work via AllowAny
+        # This prevents anonymous users from seeing all reports while allowing them to submit
+        if self.request.method == 'GET':
+            return Report.objects.none()
+            
+        return Report.objects.all()
 
         status_f = self.request.query_params.get('status')
         severity_f = self.request.query_params.get('severity')
@@ -66,7 +77,10 @@ class ReportListCreateView(generics.ListCreateAPIView):
         return qs.order_by('-created_at')
 
     def perform_create(self, serializer):
-        report = serializer.save(user=self.request.user)
+        print(f"DEBUG: Tentative de création de rapport... Donnée reçues: {self.request.data}")
+        user = self.request.user if self.request.user.is_authenticated else None
+        report = serializer.save(user=user)
+        print(f"DEBUG: Rapport créé avec succès ! ID={report.id}, Titre={report.title}")
         if report.severity == 'high':
             report.is_critical = True
             report.save()
@@ -90,7 +104,12 @@ class ReportListCreateView(generics.ListCreateAPIView):
 
 class ReportDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ReportSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        # Allow anyone to view details, but only authenticated to modify
+        if self.request.method == 'GET':
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user

@@ -32,7 +32,7 @@ class Report(models.Model):
         ('other', 'Autre'),
     )
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reports')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reports', null=True, blank=True)
     technician = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_reports')
     category_type = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)

@@ -23,6 +23,12 @@ class ReportSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('user', 'created_at', 'updated_at')
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if not ret.get('user_username'):
+            ret['user_username'] = "Anonyme"
+        return ret
+
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
