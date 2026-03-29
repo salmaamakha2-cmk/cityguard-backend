@@ -24,13 +24,25 @@ def api_root(request):
         <body>
             <div class="card">
                 <h1>🚀 CityGuard Backend est EN LIGNE</h1>
-                <p>Ceci est le serveur de données (Backend).<br>Pour voir votre <b>vrai site web</b>, cliquez sur le bouton ci-dessous :</p>
-                <a href="http://localhost:8082" class="btn">ACCÉDER AU SITE WEB (FRONTEND)</a>
+                <p>Ceci est le serveur de données (Backend).<br>Pour voir votre <b>Dashboard Admin</b>, assurez-vous de lancer votre application React (npm run dev) :</p>
+                <a href="http://localhost:5173" class="btn">ACCÉDER AU DASHBOARD (REACT)</a>
             </div>
         </body>
     </html>
     """
     return HttpResponse(html)
+
+def api_info(request):
+    return JsonResponse({
+        "name": "CityGuard API",
+        "version": "1.0",
+        "status": "online",
+        "endpoints": {
+            "users": "/api/users/",
+            "reports": "/api/reports/",
+            "docs": "/swagger/"
+        }
+    })
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -45,6 +57,8 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
+    path('favicon.ico', lambda x: HttpResponse(status=204)),
+    path('api/', api_info, name='api-info'),
     path('api/users/', include('users.urls')),
     path('api/reports/', include('reports.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

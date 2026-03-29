@@ -29,6 +29,7 @@ class Report(models.Model):
         ('lighting', 'Éclairage'),
         ('waste', 'Déchets'),
         ('water', 'Fuite eau'),
+        ('vandalism', 'Vandalisme'),
         ('other', 'Autre'),
     )
 

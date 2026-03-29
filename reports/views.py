@@ -37,44 +37,44 @@ class IsAdmin(permissions.BasePermission):
 # ─── REPORTS ───────────────────────────────────────────
 class ReportListCreateView(generics.ListCreateAPIView):
     serializer_class = ReportSerializer
-    permission_classes = [] 
-    authentication_classes = []
+    # Uses global defaults: AllowAny but identifies user if token present
 
     def get_queryset(self):
         user = self.request.user
         
-        # If admin/technician, show all
+        # Admin / Technician can see everything
         if user.is_authenticated and hasattr(user, 'role') and user.role in ['admin', 'technician']:
-            return Report.objects.all().filter(is_archived=False).order_by('-created_at')
+            qs = Report.objects.all().filter(is_archived=False)
+            
+            # Re-enable filtering that was previously unreachable
+            status_f = self.request.query_params.get('status')
+            severity_f = self.request.query_params.get('severity')
+            category_f = self.request.query_params.get('category_type')
+            quartier_f = self.request.query_params.get('quartier')
+            date_from = self.request.query_params.get('date_from')
+            date_to = self.request.query_params.get('date_to')
+            critical_f = self.request.query_params.get('is_critical')
+
+            if status_f: qs = qs.filter(status=status_f)
+            if severity_f: qs = qs.filter(severity=severity_f)
+            if category_f: qs = qs.filter(category_type=category_f)
+            if quartier_f: qs = qs.filter(quartier__icontains=quartier_f)
+            if date_from: qs = qs.filter(created_at__date__gte=date_from)
+            if date_to: qs = qs.filter(created_at__date__lte=date_to)
+            if critical_f: qs = qs.filter(is_critical=critical_f.lower() == 'true')
+
+            return qs.order_by('-created_at')
         
-        # If regular user, show their own
+        # Citizen (regular accounts) sees their own reports
         if user.is_authenticated:
             return Report.objects.filter(user=user, is_archived=False).order_by('-created_at')
             
-        # If anonymous (citizen), show NOTHING but allow the POST to work via AllowAny
-        # This prevents anonymous users from seeing all reports while allowing them to submit
+        # Anonymous users (citizens submitting) get empty list for GET, but can still POST
         if self.request.method == 'GET':
             return Report.objects.none()
             
         return Report.objects.all()
 
-        status_f = self.request.query_params.get('status')
-        severity_f = self.request.query_params.get('severity')
-        category_f = self.request.query_params.get('category_type')
-        quartier_f = self.request.query_params.get('quartier')
-        date_from = self.request.query_params.get('date_from')
-        date_to = self.request.query_params.get('date_to')
-        critical_f = self.request.query_params.get('is_critical')
-
-        if status_f: qs = qs.filter(status=status_f)
-        if severity_f: qs = qs.filter(severity=severity_f)
-        if category_f: qs = qs.filter(category_type=category_f)
-        if quartier_f: qs = qs.filter(quartier__icontains=quartier_f)
-        if date_from: qs = qs.filter(created_at__date__gte=date_from)
-        if date_to: qs = qs.filter(created_at__date__lte=date_to)
-        if critical_f: qs = qs.filter(is_critical=critical_f.lower() == 'true')
-
-        return qs.order_by('-created_at')
 
     def perform_create(self, serializer):
         print(f"DEBUG: Tentative de création de rapport... Donnée reçues: {self.request.data}")
